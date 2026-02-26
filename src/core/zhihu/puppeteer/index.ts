@@ -390,16 +390,32 @@ export class PuppeteerManager {
     // 设置User-Agent
     await page.setUserAgent(PuppeteerManager.getUA());
 
-    // 如果有cookie，设置到页面，并去除BEC参数
+    // 如果有cookie，设置到页面（保留完整Cookie，包含BEC字段）
     const cookie = CookieManager.getCookie();
     if (cookie) {
-      // 去除cookie中的BEC参数，避免重定向到热榜页面
-      const cleanedCookie = CookieManager.removeBECFromCookie(cookie);
-      await PuppeteerManager.addCookiesToPage(cleanedCookie);
+      await PuppeteerManager.addCookiesToPage(cookie);
     } else {
       console.log("没有找到Cookie，需要设置Cookie");
       throw new Error("没有找到Cookie，需要设置Cookie");
     }
+
+    // 启用请求拦截，阻止因BEC验证失败触发的重定向到热榜
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      try {
+        const isRedirectToHot =
+          req.isNavigationRequest() &&
+          /^https:\/\/www\.zhihu\.com\/hot(\?|$)/.test(req.url());
+        if (isRedirectToHot) {
+          console.log(`已拦截 BEC 导致的热榜重定向: ${req.url()}`);
+          req.abort("aborted");
+        } else {
+          req.continue();
+        }
+      } catch {
+        // 请求可能已被其他方式处理，忽略
+      }
+    });
 
     // 防反爬虫设置
     await page.evaluateOnNewDocument(() => {

@@ -25,6 +25,8 @@ export class sidebarRecommendListDataProvider
   private loadingStatusItem: vscode.StatusBarItem;
   private canCreateBrowser: boolean = false; // 是否可以创建浏览器实例
   private treeView?: vscode.TreeView<TreeItem>; // TreeView 引用，用于更新标题
+  private lastRefreshTime: number = 0;
+  private readonly COOLDOWN_MS = 30000;
 
   constructor() {
     this.loadingStatusItem = vscode.window.createStatusBarItem(
@@ -76,6 +78,17 @@ export class sidebarRecommendListDataProvider
 
   // 刷新树视图
   refresh(): void {
+    const now = Date.now();
+    if (now - this.lastRefreshTime < this.COOLDOWN_MS) {
+      const remaining = Math.ceil(
+        (this.COOLDOWN_MS - (now - this.lastRefreshTime)) / 1000
+      );
+      vscode.window.showInformationMessage(
+        `刷新过于频繁，请等待 ${remaining} 秒后再试`
+      );
+      return;
+    }
+    this.lastRefreshTime = now;
     console.log("触发知乎推荐刷新...");
     this.getSideBarRecommendList();
   }

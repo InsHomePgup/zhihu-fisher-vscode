@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { CookieManager } from "../cookie";
+import { PuppeteerManager } from "../puppeteer";
 
 /**
  * HTTP请求选项接口
@@ -31,15 +32,13 @@ export class ZhihuApiService {
       Origin: "https://www.zhihu.com",
       Pragma: "no-cache",
       Referer: "https://www.zhihu.com/",
-      "Sec-Ch-Ua":
-        '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+      "Sec-Ch-Ua": PuppeteerManager.getSecChUa(),
       "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"Windows"',
+      "Sec-Ch-Ua-Platform": PuppeteerManager.getOSPlatform(),
       "Sec-Fetch-Dest": "empty",
       "Sec-Fetch-Mode": "cors",
       "Sec-Fetch-Site": "same-origin",
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36",
+      "User-Agent": PuppeteerManager.getUA(),
       "X-Requested-With": "XMLHttpRequest",
     };
 
@@ -70,6 +69,13 @@ export class ZhihuApiService {
       }
 
       console.log(`${operationName}: ${url}`);
+
+      // 对 POST/DELETE 请求加入随机延迟，降低风控识别概率
+      if (options.method === "POST" || options.method === "DELETE") {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 200 + Math.random() * 600)
+        );
+      }
 
       const response = await fetch(url, {
         method: options.method,

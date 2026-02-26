@@ -14,6 +14,44 @@ interface ChromePathExample {
 }
 
 export class PuppeteerManager {
+  private static _cachedUA: string = "";
+  private static _cachedChromeMajorVersion: string = "";
+
+  /**
+   * 获取缓存的 User-Agent，未缓存时返回默认值
+   */
+  static getUA(): string {
+    if (PuppeteerManager._cachedUA) {
+      return PuppeteerManager._cachedUA;
+    }
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.84 Safari/537.36";
+  }
+
+  /**
+   * 基于缓存的主版本号动态拼接 Sec-Ch-Ua 字符串
+   */
+  static getSecChUa(): string {
+    const v = PuppeteerManager._cachedChromeMajorVersion || "135";
+    return `"Chromium";v="${v}", "Not(A:Brand";v="24", "Google Chrome";v="${v}"`;
+  }
+
+  /**
+   * 将 getOSType() 结果转换为 Sec-Ch-Ua-Platform 格式字符串
+   */
+  static getOSPlatform(): string {
+    const osType = PuppeteerManager.getOSType();
+    switch (osType) {
+      case "Windows":
+        return '"Windows"';
+      case "MacOS":
+        return '"macOS"';
+      case "Linux":
+        return '"Linux"';
+      default:
+        return '"Unknown"';
+    }
+  }
+
   /**
    * 获取当前操作系统类型
    * @returns 操作系统类型："Windows" | "MacOS" | "Linux" | "unsupported"
@@ -165,7 +203,7 @@ export class PuppeteerManager {
               args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
-                "--window-size=1000,700",
+                "--window-size=1280,800",
                 "--disable-features=UseEcoQoSForBackgroundProcess", // 禁用效能模式，确保在win11系统中流畅运行（todo: test needed）
               ],
               pipe: true,
@@ -178,6 +216,29 @@ export class PuppeteerManager {
                 isDebugMode ? "（调试模式）" : "（后台模式）"
               }`
             );
+
+            // 缓存真实 Chrome 版本号和 UA
+            try {
+              const versionString = await Store.browserInstance!.version(); // 如 "Chrome/135.0.7049.84"
+              const versionMatch = versionString.match(/Chrome\/([\d.]+)/);
+              if (versionMatch) {
+                const fullVersion = versionMatch[1];
+                const majorVersion = fullVersion.split(".")[0];
+                PuppeteerManager._cachedChromeMajorVersion = majorVersion;
+                const osType = PuppeteerManager.getOSType();
+                let uaOS = "Windows NT 10.0; Win64; x64";
+                if (osType === "MacOS") {
+                  uaOS = "Macintosh; Intel Mac OS X 10_15_7";
+                } else if (osType === "Linux") {
+                  uaOS = "X11; Linux x86_64";
+                }
+                PuppeteerManager._cachedUA = `Mozilla/5.0 (${uaOS}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${fullVersion} Safari/537.36`;
+                console.log(`已缓存浏览器 UA: ${PuppeteerManager._cachedUA}`);
+              }
+            } catch (versionError) {
+              console.warn("获取浏览器版本失败，将使用默认 UA:", versionError);
+            }
+
             break; // 成功启动后跳出循环
           } catch (error) {
             console.error("尝试启动浏览器失败:", error);
@@ -324,12 +385,10 @@ export class PuppeteerManager {
     const page = await browser.newPage();
 
     // 设置浏览器视窗大小
-    await page.setViewport({ width: 800, height: 600 });
+    await page.setViewport({ width: 1280, height: 800 });
 
     // 设置User-Agent
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36"
-    );
+    await page.setUserAgent(PuppeteerManager.getUA());
 
     // 如果有cookie，设置到页面，并去除BEC参数
     const cookie = CookieManager.getCookie();
@@ -387,18 +446,18 @@ export class PuppeteerManager {
     await page.evaluate(() => {
       window.scrollTo(0, document.body.scrollHeight); // 滚动到底部
     });
-    await PuppeteerManager.delay(1000 + Math.random() * 500);
+    await PuppeteerManager.delay(800 + Math.random() * 1200);
 
-    await page.mouse.wheel({ deltaY: 1000 }); // 快速滚到底部
-    await PuppeteerManager.delay(1000 + Math.random() * 500);
+    await page.mouse.wheel({ deltaY: 800 + Math.random() * 400 }); // 快速滚到底部
+    await PuppeteerManager.delay(800 + Math.random() * 1200);
 
-    // 2. 上移 200px 制造滚动空间
-    await page.mouse.wheel({ deltaY: -200 });
-    await PuppeteerManager.delay(1000 + Math.random() * 500);
+    // 2. 上移制造滚动空间
+    await page.mouse.wheel({ deltaY: -(150 + Math.random() * 150) });
+    await PuppeteerManager.delay(800 + Math.random() * 1200);
 
     // 3. 再次下滚触发加载
-    await page.mouse.wheel({ deltaY: 1000 });
-    await PuppeteerManager.delay(1000 + Math.random() * 500);
+    await page.mouse.wheel({ deltaY: 800 + Math.random() * 400 });
+    await PuppeteerManager.delay(800 + Math.random() * 1200);
   }
 
   /**

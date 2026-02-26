@@ -25,6 +25,8 @@ export class sidebarSearchListDataProvider
   private loadingStatusItem: vscode.StatusBarItem;
   private canCreateBrowser: boolean = false; // 是否可以创建浏览器实例
   private treeView?: vscode.TreeView<TreeItem>; // TreeView 引用，用于更新标题
+  private lastRefreshTime: number = 0;
+  private readonly COOLDOWN_MS = 30000;
 
   constructor() {
     this.loadingStatusItem = vscode.window.createStatusBarItem(
@@ -64,6 +66,18 @@ export class sidebarSearchListDataProvider
 
   // 执行搜索
   async searchContent(query: string): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastRefreshTime < this.COOLDOWN_MS) {
+      const remaining = Math.ceil(
+        (this.COOLDOWN_MS - (now - this.lastRefreshTime)) / 1000
+      );
+      vscode.window.showInformationMessage(
+        `搜索过于频繁，请等待 ${remaining} 秒后再试`
+      );
+      return;
+    }
+    this.lastRefreshTime = now;
+
     // 看看能不能创建浏览器实例，不能则认为加载不出搜索结果
     this.canCreateBrowser = await PuppeteerManager.canCreateBrowser();
     if (!this.canCreateBrowser) {

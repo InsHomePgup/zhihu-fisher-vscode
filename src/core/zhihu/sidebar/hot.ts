@@ -23,6 +23,8 @@ export class sidebarHotListDataProvider
   private loadingStatusItem: vscode.StatusBarItem;
   private canCreateBrowser: boolean = false; // 是否可以创建浏览器实例
   private treeView?: vscode.TreeView<TreeItem>; // TreeView 引用，用于更新标题
+  private lastRefreshTime: number = 0;
+  private readonly COOLDOWN_MS = 30000;
 
   constructor() {
     this.loadingStatusItem = vscode.window.createStatusBarItem(
@@ -58,6 +60,17 @@ export class sidebarHotListDataProvider
 
   // 刷新树视图
   refresh(): void {
+    const now = Date.now();
+    if (now - this.lastRefreshTime < this.COOLDOWN_MS) {
+      const remaining = Math.ceil(
+        (this.COOLDOWN_MS - (now - this.lastRefreshTime)) / 1000
+      );
+      vscode.window.showInformationMessage(
+        `刷新过于频繁，请等待 ${remaining} 秒后再试`
+      );
+      return;
+    }
+    this.lastRefreshTime = now;
     console.log("触发知乎热榜刷新...");
     this.getSideBarHotList();
   }
@@ -145,18 +158,16 @@ export class sidebarHotListDataProvider
 
     // 构建请求头
     const headers: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36",
+      "User-Agent": PuppeteerManager.getUA(),
       Accept:
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
       "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
       "Accept-Encoding": "gzip, deflate, br",
       "Cache-Control": "max-age=0",
       Connection: "keep-alive",
-      "Sec-Ch-Ua":
-        '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+      "Sec-Ch-Ua": PuppeteerManager.getSecChUa(),
       "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"Windows"',
+      "Sec-Ch-Ua-Platform": PuppeteerManager.getOSPlatform(),
       "Sec-Fetch-Dest": "document",
       "Sec-Fetch-Mode": "navigate",
       "Sec-Fetch-Site": "none",

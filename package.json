@@ -887,6 +887,13 @@
           "default": 10,
           "description": "每批预加载的回答数量。只有达到该数量才会停止加载更多(限制范围5-50)。数值越小加载越快，小于10可能不生效。不建议修改的太大，因为会触发知乎的反爬虫机制，可能会导致Cookie提前失效！"
         },
+        "zhihu-fisher.recommendScrollCount": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "推荐栏目加载时的滚动次数（范围1-10，默认3）。数值越大加载的推荐条数越多，但耗时也越长。"
+        },
         "zhihu-fisher.sidebarDisguiseEnabled": {
           "type": "boolean",
           "default": false,

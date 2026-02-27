@@ -433,7 +433,9 @@ export class sidebarRecommendListDataProvider
 
   // 滚动页面加载更多内容
   private async scrollToLoadMore(page: Puppeteer.Page) {
-    let scrollAttempts = 3; // 滚动尝试次数
+    const scrollAttempts = vscode.workspace
+      .getConfiguration("zhihu-fisher")
+      .get<number>("recommendScrollCount", 3);
     for (let i = 0; i < scrollAttempts; i++) {
       console.log(`执行页面滚动 #${i + 1}/${scrollAttempts}`);
       const scrollHeight = await page.evaluate(() => {
